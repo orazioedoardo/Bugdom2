@@ -968,6 +968,8 @@ void StartLevelCompletion(float coolDownTimer)
 
 static void CleanupLevel(void)
 {
+	GrabMouse(false);
+
 	StopAllEffectChannels();
 	DisposeTunnelData();
 	DeleteAllObjects();
@@ -1028,7 +1030,12 @@ unsigned long	someLong;
 
 	LoadLocalizedStrings(gGamePrefs.language);
 	InitInput();
+
 	OGL_Boot();
+
+	// Set fullscreen mode from prefs (*after* we have a GL context for Wayland)
+	SetFullscreenMode(true);
+
 	InitSpriteManager();
 	InitBG3DManager();
 	InitWindowStuff();
