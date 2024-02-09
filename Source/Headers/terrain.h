@@ -39,7 +39,7 @@ enum
 #define	NUM_TRIS_IN_SUPERTILE		(SUPERTILE_SIZE * SUPERTILE_SIZE * 2)			// 2 triangles per tile
 #define	NUM_VERTICES_IN_SUPERTILE	((SUPERTILE_SIZE+1)*(SUPERTILE_SIZE+1))			// # vertices in a supertile
 
-#define	MAX_SUPERTILE_ACTIVE_RANGE	9
+#define	MAX_SUPERTILE_ACTIVE_RANGE	6
 
 #define	SUPERTILE_DIST_WIDE			(gSuperTileActiveRange*2)
 #define	SUPERTILE_DIST_DEEP			(gSuperTileActiveRange*2)
