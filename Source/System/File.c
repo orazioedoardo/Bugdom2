@@ -11,7 +11,6 @@
 /***************/
 
 #include "game.h"
-#include <time.h>
 
 
 /****************************/
@@ -482,7 +481,7 @@ long		count;
 	{
 		if (need < NUM_REMAPPABLE_NEEDS)
 		{
-			GAME_ASSERT(MAX_USER_BINDINGS_PER_NEED <= MAX_BINDINGS_PER_NEED);
+			_Static_assert(MAX_USER_BINDINGS_PER_NEED <= MAX_BINDINGS_PER_NEED, "user bindings > max!");
 			for (int j = MAX_USER_BINDINGS_PER_NEED; j < MAX_BINDINGS_PER_NEED; j++)
 			{
 				gGamePrefs.bindings[need].key[j] = kDefaultInputBindings[need].key[j];
@@ -493,6 +492,13 @@ long		count;
 		{
 			gGamePrefs.bindings[need] = kDefaultInputBindings[need];
 		}
+	}
+
+			/* CHECK DISPLAY */
+
+	if (gGamePrefs.displayNumMinus1 > GetNumDisplays())
+	{
+		gGamePrefs.displayNumMinus1 = 0;
 	}
 
 	return(noErr);
@@ -1185,12 +1191,17 @@ short			fRefNum;
 FSSpec			spec;
 OSErr			err;
 Str255			saveFilePath;
+SDL_Time		timestampNanoseconds = 0;
+
+			/* GET TIMESTAMP */
+
+	SDL_GetCurrentTime(&timestampNanoseconds);
 
 			/*************************/
 			/* CREATE SAVE GAME DATA */
 			/*************************/
 
-	saveData.timestamp		= time(NULL);
+	saveData.timestamp		= timestampNanoseconds / 1e9;
 	saveData.version		= SAVE_GAME_VERSION;				// save file version #
 	saveData.score 			= gScore;
 	saveData.health			= gPlayerInfo.health;
@@ -1209,7 +1220,7 @@ Str255			saveFilePath;
 
 	CheckPrefsFolder(true);
 
-	SDL_snprintf(saveFilePath, sizeof(saveFilePath), ":" PROJECT_NAME ":Save%c", 'A' + slot);
+	SDL_snprintf(saveFilePath, sizeof(saveFilePath), ":" GAME_NAME ":Save%c", 'A' + slot);
 
 	FSMakeFSSpec(gPrefsFolderVRefNum, gPrefsFolderDirID, saveFilePath, &spec);
 
@@ -1251,7 +1262,7 @@ OSErr			err;
 short			refNum;
 Str255			saveFilePath;
 
-	SDL_snprintf(saveFilePath, sizeof(saveFilePath), ":" PROJECT_NAME ":Save%c", 'A' + slot);
+	SDL_snprintf(saveFilePath, sizeof(saveFilePath), ":" GAME_NAME ":Save%c", 'A' + slot);
 
 	FSMakeFSSpec(gPrefsFolderVRefNum, gPrefsFolderDirID, saveFilePath, &spec);
 	err = FSpOpenDF(&spec, fsRdPerm, &refNum);
