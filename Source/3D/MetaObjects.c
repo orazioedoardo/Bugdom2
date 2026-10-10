@@ -12,10 +12,17 @@
 
 #include "game.h"
 
+#if __EMSCRIPTEN__		// gl4es only exports the core names (see OGL_Support.c)
+#undef glActiveTextureARB
+#undef glClientActiveTextureARB
+#define glActiveTextureARB glActiveTexture
+#define glClientActiveTextureARB glClientActiveTexture
+#else
 extern PFNGLACTIVETEXTUREPROC gGlActiveTextureProc;
 extern PFNGLCLIENTACTIVETEXTUREARBPROC gGlClientActiveTextureProc;
 #define glActiveTextureARB gGlActiveTextureProc
 #define glClientActiveTextureARB gGlClientActiveTextureProc
+#endif
 
 
 /****************************/

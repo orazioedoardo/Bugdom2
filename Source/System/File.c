@@ -12,6 +12,10 @@
 
 #include "game.h"
 
+#if __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 
 /****************************/
 /*    PROTOTYPES            */
@@ -546,6 +550,23 @@ long				count;
 	count = sizeof(PrefsType);
 	FSWrite(refNum, &count, (Ptr) &gGamePrefs);
 	FSClose(refNum);
+	SyncPrefsFolder();
+}
+
+
+/******************** SYNC PREFS FOLDER **********************/
+//
+// On the web, the prefs folder lives in IndexedDB (mounted by the web page).
+// Call this after writing to it so that the changes survive a page reload.
+//
+
+void SyncPrefsFolder(void)
+{
+#if __EMSCRIPTEN__
+	EM_ASM(FS.syncfs(false, function (err) {
+		if (err) console.warn("Saving files failed:", err);
+	}););
+#endif
 }
 
 
@@ -1242,6 +1263,7 @@ SDL_Time		timestampNanoseconds = 0;
 	long count = sizeof(SaveGameType);
 	err = FSWrite(fRefNum, &count, (Ptr)&saveData);
 	FSClose(fRefNum);
+	SyncPrefsFolder();
 
 	if (count != sizeof(SaveGameType) || err != noErr)
 	{

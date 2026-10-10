@@ -13,13 +13,19 @@
 #include "game.h"
 #include "tga.h"
 
+#if __EMSCRIPTEN__
+#include <gl4esinit.h>
+#endif
+
 
 /****************************/
 /*    PROTOTYPES            */
 /****************************/
 
+#if !__EMSCRIPTEN__		// on the web, call gl4es directly (SDL_GL_GetProcAddress would bypass gl4es)
 PFNGLACTIVETEXTUREPROC gGlActiveTextureProc;
 PFNGLCLIENTACTIVETEXTUREARBPROC gGlClientActiveTextureProc;
+#endif
 
 static void OGL_InitDrawContext(OGLViewDefType *viewDefPtr);
 static void OGL_SetStyles(OGLSetupInputType *setupDefPtr);
@@ -116,6 +122,10 @@ void OGL_Boot(void)
 
 	bool didMakeCurrent = SDL_GL_MakeCurrent(gSDLWindow, gAGLContext);
 	GAME_ASSERT_MESSAGE(didMakeCurrent, SDL_GetError());
+
+#if __EMSCRIPTEN__
+	initialize_gl4es();																// gl4es needs a live WebGL context
+#endif
 	
 	
 			/* SEE IF SUPPORT 1024x1024 TEXTURES */
@@ -129,11 +139,13 @@ void OGL_Boot(void)
 			/* GET GL PROCEDURES */
 			// Necessary on Windows
 
+#if !__EMSCRIPTEN__
 	gGlActiveTextureProc = (PFNGLACTIVETEXTUREPROC) SDL_GL_GetProcAddress("glActiveTexture");
 	GAME_ASSERT(gGlActiveTextureProc);
 
 	gGlClientActiveTextureProc = (PFNGLCLIENTACTIVETEXTUREARBPROC) SDL_GL_GetProcAddress("glClientActiveTexture");
 	GAME_ASSERT(gGlClientActiveTextureProc);
+#endif
 
 	OGL_CheckError();
 }
@@ -319,7 +331,7 @@ void OGL_InitDrawContext(OGLViewDefType *viewDefPtr)
 	glClearColor(0,0,0, 1.0);
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT);
-	SDL_GL_SwapWindow(gSDLWindow);
+	SwapGameWindow();
 	glClear(GL_COLOR_BUFFER_BIT);
 	glClearColor(viewDefPtr->clearColor.r, viewDefPtr->clearColor.g, viewDefPtr->clearColor.b, 1.0);
 
@@ -692,7 +704,7 @@ do_anaglyph:
 
            /* SWAP THE BUFFS */
 
-	SDL_GL_SwapWindow(gSDLWindow);							// end render loop
+	SwapGameWindow();										// end render loop
 
 
 	if (gGamePrefs.anaglyph)
@@ -1194,7 +1206,9 @@ void OGL_Texture_SetOpenGLTexture(GLuint textureName)
 //	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);	// disable mipmaps & turn on filtering
 //	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+#if !(__EMSCRIPTEN__ && !_DEBUG)		// see ogl_support.h
 	glGetError();
+#endif
 
 	glEnable(GL_TEXTURE_2D);
 }
@@ -1367,6 +1381,7 @@ OGLLightDefType	*lights;
 
 /******************** OGL: CHECK ERROR ********************/
 
+#if !(__EMSCRIPTEN__ && !_DEBUG)		// see ogl_support.h
 GLenum OGL_CheckError_Impl(const char* file, const int line)
 {
 	GLenum error = glGetError();
@@ -1388,6 +1403,7 @@ GLenum OGL_CheckError_Impl(const char* file, const int line)
 	}
 	return error;
 }
+#endif
 
 
 #pragma mark -

@@ -337,6 +337,51 @@ static UnsignedWide		time = {0};
 	}
 
 
+#if __EMSCRIPTEN__
+	// In the browser, frames are paced by requestAnimationFrame (see SwapGameWindow), so there's
+	// no need to cap the framerate here. The browser's frame timestamps are aligned to the display
+	// refresh, whereas the wall clock is read whenever the browser happens to wake us up (which
+	// jitters by a few ms) and is rounded to 0.1-1 ms (so two readings within one frame may be equal).
+
+	static uint32_t prevAnimationFrameCount = 0;
+	static uint32_t prevNumAnimationFrames = 0;
+	static double prevAnimationFrameTime = 0;
+
+	Microseconds(&currTime);
+	uint32_t numAnimationFrames = gAnimationFrameCount - prevAnimationFrameCount;
+
+	if (numAnimationFrames == 0)
+	{
+		// Called again within the same frame (e.g. to prime the timer before a loop):
+		// as far as the display is concerned, no time has passed, so keep the current average
+		time = currTime;
+		return;
+	}
+
+	unsigned long deltaTime;
+
+	if (numAnimationFrames == 1 && prevNumAnimationFrames == 1)
+	{
+		// Steady state: called once per frame
+		deltaTime = (unsigned long) ((gAnimationFrameTime - prevAnimationFrameTime) * (TIME_UNIT / 1000));
+	}
+	else
+	{
+		// First frame of a loop, or after a loading screen: use the wall clock like natively
+		deltaTime = currTime.lo - time.lo;
+	}
+
+	if (deltaTime == 0)
+		deltaTime = kFallbackDelta;
+	else if (deltaTime > kMaxDelta)
+		deltaTime = kMaxDelta;
+	else if (deltaTime < TIME_UNIT / MAX_FPS)
+		deltaTime = TIME_UNIT / MAX_FPS;
+
+	prevAnimationFrameCount = gAnimationFrameCount;
+	prevNumAnimationFrames = numAnimationFrames;
+	prevAnimationFrameTime = gAnimationFrameTime;
+#else
 wait:
 	Microseconds(&currTime);
 
@@ -366,6 +411,7 @@ wait:
 		}
 #endif
 	}
+#endif
 
 #if _DEBUG
 	if (GetKeyState(SDL_SCANCODE_BACKSLASH))	// debug speed-up with backslash key

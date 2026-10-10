@@ -1,6 +1,12 @@
 #include "game.h"
 
-#if __APPLE__
+#if __EMSCRIPTEN__
+	// In the browser, avoid Cmd (keyups get lost while it's held on macOS)
+	#define SC_KICK1 SDL_SCANCODE_LALT
+	#define SC_KICK2 SDL_SCANCODE_RALT
+	#define SC_PICK1 SDL_SCANCODE_LCTRL
+	#define SC_PICK2 SDL_SCANCODE_RCTRL
+#elif __APPLE__
 	#define SC_KICK1 SDL_SCANCODE_LGUI
 	#define SC_KICK2 SDL_SCANCODE_RGUI
 	#define SC_PICK1 SDL_SCANCODE_LALT

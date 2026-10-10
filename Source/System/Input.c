@@ -149,6 +149,7 @@ static void UpdateRawKeyboardStates(void)
 		UpdateKeyState(&gKeyboardStates[i], false);
 }
 
+#if !__EMSCRIPTEN__
 static void ProcessAltEnter(void)
 {
 	if (IsKeyDown(SDL_SCANCODE_RETURN)
@@ -160,6 +161,7 @@ static void ProcessAltEnter(void)
 		InvalidateAllInputs();
 	}
 }
+#endif
 
 #if __APPLE__
 static void ProcessCmdQ(void)
@@ -358,7 +360,9 @@ void UpdateInput(void)		// Also called DoSDLMaintenance in other ports
 	UpdateRawKeyboardStates();
 
 	// On ALT+ENTER, toggle fullscreen, and ignore ENTER until keyup.
+#if !__EMSCRIPTEN__		// on the web, the page toggles fullscreen with Cmd+F
 	ProcessAltEnter();
+#endif
 
 	// Refresh the state of each mouse button
 	UpdateMouseButtonStates(mouseWheelDeltaX, mouseWheelDeltaY);

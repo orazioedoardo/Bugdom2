@@ -103,6 +103,7 @@ SkeletonDefType *LoadSkeletonFile(short skeletonType);
 extern	void	OpenGameFile(Str255 filename,short *fRefNumPtr, Str255 errString);
 extern	OSErr LoadPrefs(void);
 void SavePrefs(void);
+void SyncPrefsFolder(void);
 
 void LoadPlayfield(FSSpec *specPtr);
 

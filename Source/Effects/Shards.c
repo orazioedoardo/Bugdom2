@@ -403,11 +403,37 @@ del:
 }
 
 
+/************************* SHARD LOOKS LIKE SHARD ****************************/
+//
+// Returns true if both shards can be drawn in the same draw call.
+//
+
+static Boolean ShardLooksLikeShard(const ShardType* a, const ShardType* b)
+{
+	return a->material == b->material
+		&& a->glow == b->glow
+		&& a->colorFilter.r == b->colorFilter.r
+		&& a->colorFilter.g == b->colorFilter.g
+		&& a->colorFilter.b == b->colorFilter.b
+		&& a->colorFilter.a == b->colorFilter.a;
+}
+
+
 /************************* DRAW SHARDS ****************************/
+//
+// Each shard is a single triangle with its own transform. Instead of issuing one draw call per shard,
+// shards that look alike are pre-transformed into a shared vertex buffer and drawn together.
+// This matters a lot in the browser, where each draw call is expensive.
+//
 
 static void DrawShards(ObjNode* theNode)
 {
 	(void) theNode;
+
+static OGLPoint3D		batchPoints[MAX_SHARDS * 3];
+static OGLVector3D		batchNormals[MAX_SHARDS * 3];
+static OGLTextureCoord	batchUVs[MAX_SHARDS * 3];
+static int				pendingShards[MAX_SHARDS];
 
 	if (Pool_Empty(gShardPool))						// quick check if any particles at all
 		return;
@@ -417,46 +443,88 @@ static void DrawShards(ObjNode* theNode)
 //	glDisable(GL_CULL_FACE);
 //	OGL_DisableLighting();
 
+	// The shards don't have normals of their own, so they're lit with the current normal,
+	// which GL transforms by each shard's matrix. GL_NORMALIZE is on, so only the rotation matters.
+	OGLVector3D currentNormal;
+	glGetFloatv(GL_CURRENT_NORMAL, (GLfloat*) &currentNormal);
+
+	int numPending = 0;
 	for (int i = Pool_First(gShardPool); i >= 0; i = Pool_Next(gShardPool, i))
 	{
 #if _DEBUG
 		GAME_ASSERT(Pool_IsUsed(gShardPool, i));
 #endif
+		pendingShards[numPending++] = i;
+	}
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, batchPoints);
+	glNormalPointer(GL_FLOAT, 0, batchNormals);
+	glTexCoordPointer(2, GL_FLOAT, 0, batchUVs);
+
+	while (numPending > 0)
+	{
+		const ShardType* look = &gShards[pendingShards[0]];
 
 				/* SUBMIT MATERIAL */
 
-		gGlobalColorFilter.r = gShards[i].colorFilter.r;
-		gGlobalColorFilter.g = gShards[i].colorFilter.g;
-		gGlobalColorFilter.b = gShards[i].colorFilter.b;
-		gGlobalTransparency = gShards[i].colorFilter.a;
+		gGlobalColorFilter.r = look->colorFilter.r;
+		gGlobalColorFilter.g = look->colorFilter.g;
+		gGlobalColorFilter.b = look->colorFilter.b;
+		gGlobalTransparency = look->colorFilter.a;
 
-		if (gShards[i].glow)
+		if (look->glow)
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		else
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
-		if (gShards[i].material)
-			MO_DrawMaterial(gShards[i].material);
+		if (look->material)
+			MO_DrawMaterial(look->material);
 
-				/* SET MATRIX */
+				/* TRANSFORM ALL SHARDS THAT LOOK THE SAME INTO THE BATCH */
+				// (shards that don't match stay pending for a later batch)
 
-		glPushMatrix();
-		glMultMatrixf(gShards[i].matrix.value);
+		int numPoints = 0;
+		int numStillPending = 0;
 
+		for (int p = 0; p < numPending; p++)
+		{
+			const ShardType* shard = &gShards[pendingShards[p]];
 
-				/* DRAW THE TRIANGLE */
+			if (!ShardLooksLikeShard(shard, look))
+			{
+				pendingShards[numStillPending++] = pendingShards[p];
+				continue;
+			}
 
-		glBegin(GL_TRIANGLES);
-		glTexCoord2fv(&gShards[i].uvs[0].u);	glVertex3fv(&gShards[i].points[0].x);
-		glTexCoord2fv(&gShards[i].uvs[1].u);	glVertex3fv(&gShards[i].points[1].x);
-		glTexCoord2fv(&gShards[i].uvs[2].u);	glVertex3fv(&gShards[i].points[2].x);
-		glEnd();
+			OGLVector3D normal;
+			OGLVector3D_Transform(&currentNormal, &shard->matrix, &normal);		// rotated and normalized
 
-		glPopMatrix();
+			for (int v = 0; v < 3; v++)
+			{
+				OGLPoint3D_Transform(&shard->points[v], &shard->matrix, &batchPoints[numPoints]);
+				batchNormals[numPoints] = normal;
+				batchUVs[numPoints] = shard->uvs[v];
+				numPoints++;
+			}
+		}
+
+		numPending = numStillPending;
+
+				/* DRAW THE BATCH */
+
+		glDrawArrays(GL_TRIANGLES, 0, numPoints);
 	}
 
 		/* CLEANUP */
+
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glNormal3f(currentNormal.x, currentNormal.y, currentNormal.z);
 
 	gGlobalColorFilter.r =
 	gGlobalColorFilter.g =

@@ -71,6 +71,7 @@ static const char* GenerateGamepadLabel(void)
 		return Localize(STR_NO_GAMEPAD_DETECTED);
 }
 
+#if !__EMSCRIPTEN__		// video settings that only exist natively (see the video menu)
 static uint8_t GenerateNumDisplays(void)
 {
 	int numDisplays = GetNumDisplays();
@@ -82,6 +83,7 @@ static const char* GenerateDisplayName(char* buf, int bufSize, Byte value)
 	SDL_snprintf(buf, bufSize, "%s %d", Localize(STR_DISPLAY), 1 + (int)value);
 	return buf;
 }
+#endif
 
 static const char* GenerateCurrentLanguageName(char* buf, int bufSize, Byte value)
 {
@@ -99,14 +101,16 @@ static void cb_ChangeAnaglyphMode(void)
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glClearColor(0,0,0,1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		SDL_GL_SwapWindow(gSDLWindow);
+		SwapGameWindow();
 	}
 }
 
+#if !__EMSCRIPTEN__
 static void SetFullscreenModeFromPrefs(void)
 {
 	SetFullscreenMode(true);
 }
+#endif
 
 /***************************************************************/
 /*                   MOUSE AUTO-WALK HINT                      */
@@ -240,6 +244,7 @@ static const MenuItem kSettingsMenuTree[] =
 	{.type = kMITitle, .text = STR_VIDEO_SETTINGS},
 //	{.type = kMISubtitle, .generateText = GenerateVideoLabel},
 	{.type = kMISpacer},
+#if !__EMSCRIPTEN__		// the web page handles fullscreen and vsync; no display choice or MSAA in the browser
 	{
 		.type = kMICycler,
 		.text = STR_FULLSCREEN,
@@ -283,6 +288,7 @@ static const MenuItem kSettingsMenuTree[] =
 			.generateChoiceString = GenerateDisplayName,
 		},
 	},
+#endif
 	{
 		.type = kMICycler,
 		.text = STR_ANAGLYPH,

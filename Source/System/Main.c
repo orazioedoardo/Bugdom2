@@ -148,7 +148,11 @@ void InitDefaultPrefs(void)
 	gGamePrefs.displayNumMinus1		= 0;
 	gGamePrefs.antialiasingLevel	= 0;
 	gGamePrefs.vsync				= true;
+#if __EMSCRIPTEN__
+	gGamePrefs.fullscreen			= false;	// stay inside the web page; the page does fullscreen
+#else
 	gGamePrefs.fullscreen			= true;
+#endif
 	gGamePrefs.uiCentering			= false;
 	gGamePrefs.music				= true;
 	gGamePrefs.buddyBugBuzz			= true;

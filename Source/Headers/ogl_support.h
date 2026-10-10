@@ -256,8 +256,14 @@ void OGL_UpdateCameraFromTo(const OGLPoint3D *from, const OGLPoint3D *to);
 void OGL_Texture_SetOpenGLTexture(GLuint textureName);
 GLuint OGL_TextureMap_LoadTGA(const char* path, int* outWidth, int* outHeight);
 GLuint OGL_TextureMap_Load(void *imageMemory, int width, int height, GLint srcFormat,  GLint destFormat, GLint dataType);
+#if __EMSCRIPTEN__ && !_DEBUG
+// In the browser, glGetError is a synchronous round trip to the GPU process,
+// and calling it after every GL call causes severe stuttering.
+#define OGL_CheckError() ((GLenum) GL_NO_ERROR)
+#else
 GLenum OGL_CheckError_Impl(const char* file, int line);
 #define OGL_CheckError() OGL_CheckError_Impl(__func__, __LINE__)
+#endif
 void OGL_GetCurrentViewport(int *x, int *y, int *w, int *h);
 
 void OGL_PushState(void);
