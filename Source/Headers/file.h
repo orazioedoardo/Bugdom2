@@ -2,7 +2,7 @@
 // file.h
 //
 
-#define NUM_SAVE_SLOTS 8
+#define NUM_SAVE_SLOTS 10
 
 		/***********************/
 		/* RESOURCE STURCTURES */
